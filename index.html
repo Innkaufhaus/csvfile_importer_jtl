@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Mapper - CSV/XLS Mapping Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">File Mapper</h1>
+            <p class="text-gray-600">Map and standardize your CSV, XLS, and XLSX files</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 gap-8">
+            <!-- File Upload Section -->
+            <section class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">1. Upload File</h2>
+                <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-600 mb-2">Drag and drop your file here or</p>
+                    <input type="file" id="fileInput" class="hidden" accept=".csv,.xls,.xlsx">
+                    <button onclick="document.getElementById('fileInput').click()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Browse Files
+                    </button>
+                </div>
+                <div id="fileInfo" class="mt-4 hidden">
+                    <p class="text-sm text-gray-600">Selected file: <span id="fileName" class="font-medium"></span></p>
+                </div>
+            </section>
+
+            <!-- Column Mapping Section -->
+            <section class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">2. Map Columns</h2>
+                <div id="mappingContainer" class="grid grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-700 mb-2">Source Columns</h3>
+                        <div id="sourceColumns" class="space-y-2"></div>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-700 mb-2">Target Columns</h3>
+                        <div id="targetColumns" class="space-y-2"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Default Values Section -->
+            <section class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">3. Set Default Values</h2>
+                <div id="defaultValues" class="grid grid-cols-2 gap-4">
+                    <!-- Default values will be populated here -->
+                </div>
+            </section>
+
+            <!-- Parent-Child Article Management -->
+            <section class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">4. Manage Parent-Child Articles</h2>
+                <div class="space-y-4">
+                    <!-- Method Selection -->
+                    <div class="flex space-x-4 mb-4">
+                        <label class="flex items-center">
+                            <input type="radio" name="groupingMethod" value="manufacturer" checked class="mr-2">
+                            <span>Group by Manufacturer</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="groupingMethod" value="manual" class="mr-2">
+                            <span>Manual Selection</span>
+                        </label>
+                    </div>
+
+                    <!-- Article Selection -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="border rounded p-4">
+                            <h3 class="font-medium mb-2">Available Articles</h3>
+                            <div id="availableArticles" class="h-64 overflow-y-auto"></div>
+                        </div>
+                        <div class="border rounded p-4">
+                            <h3 class="font-medium mb-2">Selected Articles</h3>
+                            <div id="selectedArticles" class="h-64 overflow-y-auto"></div>
+                        </div>
+                    </div>
+
+                    <!-- Parent Article Details -->
+                    <div class="border rounded p-4">
+                        <h3 class="font-medium mb-2">Parent Article Details</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Parent Article Number</label>
+                                <input type="text" id="parentArticleNumber" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Description</label>
+                                <input type="text" id="parentDescription" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            </div>
+                        </div>
+                        <button id="createParentArticle" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            Create Parent Article
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Export Section -->
+            <section class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">5. Export</h2>
+                <div class="space-y-4">
+                    <div class="flex space-x-4">
+                        <button id="previewBtn" class="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200">
+                            Preview Data
+                        </button>
+                        <button id="exportBtn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                            Export CSV
+                        </button>
+                    </div>
+                    <div id="previewContainer" class="hidden">
+                        <div class="border rounded overflow-x-auto">
+                            <table id="previewTable" class="min-w-full divide-y divide-gray-200"></table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="js/fileHandler.js"></script>
+    <script src="js/mapper.js"></script>
+    <script src="js/variants.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
