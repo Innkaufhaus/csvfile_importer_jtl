@@ -25,8 +25,20 @@
 
         <!-- Main Content -->
         <div class="grid grid-cols-1 gap-8">
+            <!-- Mode Switcher -->
+            <section class="bg-white rounded-lg shadow-md p-6 flex space-x-8 items-center">
+                <label class="inline-flex items-center space-x-2 cursor-pointer">
+                    <input type="radio" name="mode" value="file" checked class="form-radio text-blue-600">
+                    <span>Upload File</span>
+                </label>
+                <label class="inline-flex items-center space-x-2 cursor-pointer">
+                    <input type="radio" name="mode" value="gtin" class="form-radio text-blue-600">
+                    <span>Scan GTIN</span>
+                </label>
+            </section>
+
             <!-- File Upload Section -->
-            <section class="bg-white rounded-lg shadow-md p-6">
+            <section id="fileUploadSection" class="bg-white rounded-lg shadow-md p-6">
                 <h2 class="text-xl font-semibold mb-4">1. Upload File</h2>
                 <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
                     <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
@@ -64,6 +76,21 @@
                     <button id="validateMapping" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
                         Validate Mapping
                     </button>
+                </div>
+            </section>
+
+            <!-- GTIN Scan Section -->
+            <section id="gtinScanSection" class="bg-white rounded-lg shadow-md p-6 hidden">
+                <h2 class="text-xl font-semibold mb-4">Scan Single GTIN</h2>
+                <div class="flex space-x-4 items-center">
+                    <input type="text" id="gtinInput" placeholder="Enter GTIN" class="border border-gray-300 rounded px-4 py-2 flex-1" />
+                    <button id="scanGtinBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Scan
+                    </button>
+                </div>
+                <div id="gtinScanResult" class="mt-4 hidden">
+                    <h3 class="text-lg font-semibold mb-2">Scan Result</h3>
+                    <pre class="bg-gray-100 p-4 rounded overflow-x-auto" id="gtinResultContent"></pre>
                 </div>
             </section>
 

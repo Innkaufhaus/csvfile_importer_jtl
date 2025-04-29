@@ -4,16 +4,36 @@ class App {
         this.exportBtn = document.getElementById('exportBtn');
         this.previewContainer = document.getElementById('previewContainer');
         this.previewTable = document.getElementById('previewTable');
-        
+
+        this.gtinInput = document.getElementById('gtinInput');
+        this.scanGtinBtn = document.getElementById('scanGtinBtn');
+        this.gtinScanResult = document.getElementById('gtinScanResult');
+        this.gtinResultContent = document.getElementById('gtinResultContent');
+
+        this.fileUploadSection = document.getElementById('fileUploadSection');
+        this.gtinScanSection = document.getElementById('gtinScanSection');
+
         this.currentData = null;
+
         this.setupEventListeners();
     }
 
     setupEventListeners() {
+        // Mode switcher
+        document.querySelectorAll('input[name="mode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.switchMode(e.target.value);
+            });
+        });
+
+        // GTIN scan button
+        this.scanGtinBtn.addEventListener('click', () => {
+            this.scanGtin();
+        });
+
         // Listen for file load
         window.addEventListener('fileLoaded', (e) => {
             this.currentData = e.detail;
-            // Store the data in mapper for validation
             window.columnMapper.currentData = this.currentData;
             this.enableExport();
         });
@@ -41,6 +61,60 @@ class App {
         this.exportBtn.addEventListener('click', () => {
             this.exportData();
         });
+    }
+
+    switchMode(mode) {
+        if (mode === 'file') {
+            this.fileUploadSection.classList.remove('hidden');
+            this.gtinScanSection.classList.add('hidden');
+            // Hide mapping sections until file loaded
+            document.querySelectorAll('.mapping-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            this.gtinScanResult.classList.add('hidden');
+        } else if (mode === 'gtin') {
+            this.fileUploadSection.classList.add('hidden');
+            this.gtinScanSection.classList.remove('hidden');
+            this.gtinScanResult.classList.add('hidden');
+            // Clear previous GTIN input and result
+            this.gtinInput.value = '';
+            this.gtinResultContent.textContent = '';
+        }
+    }
+
+    async scanGtin() {
+        const gtin = this.gtinInput.value.trim();
+        if (!gtin) {
+            alert('Please enter a GTIN to scan.');
+            return;
+        }
+
+        this.gtinScanResult.classList.add('hidden');
+        this.gtinResultContent.textContent = 'Scanning...';
+
+        try {
+            const response = await fetch('/api/scan-gtin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ gtin })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            // Display raw JSON for now
+            this.gtinResultContent.textContent = JSON.stringify(data, null, 2);
+            this.gtinScanResult.classList.remove('hidden');
+
+            // TODO: Prefill mapping fields with data if applicable
+
+        } catch (error) {
+            this.gtinResultContent.textContent = `Error: ${error.message}`;
+            this.gtinScanResult.classList.remove('hidden');
+        }
     }
 
     enableExport() {
@@ -75,12 +149,12 @@ class App {
         // Process regular articles
         let processedData = this.currentData.map(row => {
             const processed = {};
-            
+
             // Apply column mapping
             Object.entries(mapping).forEach(([source, target]) => {
                 processed[target] = row[source];
             });
-            
+
             // Apply default values
             Object.entries(defaults).forEach(([column, value]) => {
                 if (!processed[column]) {
@@ -139,7 +213,7 @@ class App {
         });
 
         const headerRow = Array.from(headers).filter(h => h !== 'children' && h !== 'isParent');
-        
+
         this.previewTable.innerHTML = `
             <thead>
                 <tr class="bg-gray-50">
@@ -204,11 +278,11 @@ class App {
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
-        
+
         link.setAttribute('href', url);
         link.setAttribute('download', 'mapped_data.csv');
         link.style.visibility = 'hidden';
-        
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
