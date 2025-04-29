@@ -69,32 +69,62 @@ class App {
 
         const mapping = window.columnMapper.getMapping();
         const defaults = window.columnMapper.getDefaults();
+        const googleMeta = window.columnMapper.getGoogleMetaValues();
         const parentArticles = window.variantManager.getParentArticles();
 
         // Process regular articles
         let processedData = this.currentData.map(row => {
             const processed = {};
+            
             // Apply column mapping
             Object.entries(mapping).forEach(([source, target]) => {
                 processed[target] = row[source];
             });
+            
             // Apply default values
             Object.entries(defaults).forEach(([column, value]) => {
                 if (!processed[column]) {
                     processed[column] = value;
                 }
             });
+
+            // Apply Google meta fields
+            Object.entries(googleMeta).forEach(([field, value]) => {
+                // Handle linked fields
+                if (field === 'meta_google_brand' && processed['lieferant']) {
+                    processed[field] = processed['lieferant'];
+                } else if (field === 'meta_google_sku' && processed['han']) {
+                    processed[field] = processed['han'];
+                } else {
+                    processed[field] = value;
+                }
+            });
+
             return processed;
         });
 
         // Add parent articles
         parentArticles.forEach(parent => {
-            processedData.push({
-                gtin: parent.number, // Use GTIN as the main identifier
+            const parentArticle = {
+                gtin: parent.number,
                 artikelname: parent.description || `Parent Article ${parent.number}`,
                 isParent: true,
                 children: parent.children.map(child => child.gtin || child.artikelname)
+            };
+
+            // Apply Google meta fields to parent articles
+            Object.entries(googleMeta).forEach(([field, value]) => {
+                // Handle linked fields
+                if (field === 'meta_google_brand' && parentArticle['lieferant']) {
+                    parentArticle[field] = parentArticle['lieferant'];
+                } else if (field === 'meta_google_sku' && parentArticle['han']) {
+                    parentArticle[field] = parentArticle['han'];
+                } else {
+                    parentArticle[field] = value;
+                }
             });
+
+            processedData.push(parentArticle);
         });
 
         return processedData;

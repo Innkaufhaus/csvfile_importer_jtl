@@ -8,6 +8,7 @@ class ColumnMapper {
         this.currentData = null;
         
         // Standard target columns configuration
+        // Standard product columns
         this.standardColumns = [
             { id: 'gtin', name: 'GTIN', required: true, validate: this.validateGTIN },
             { id: 'han', name: 'HAN', required: false },
@@ -31,6 +32,48 @@ class ColumnMapper {
             { id: 'bild3', name: 'Bild 3 Pfad/Url', required: false },
             { id: 'bild4', name: 'Bild 4 Pfad/Url', required: false },
             { id: 'bild5', name: 'Bild 5 Pfad/Url', required: false }
+        ];
+
+        // Google meta fields with default values
+        this.googleMetaFields = [
+            { 
+                id: 'meta_google_condition', 
+                name: 'Google: Condition', 
+                defaultValue: 'neu',
+                readonly: true
+            },
+            { 
+                id: 'meta_google_gender', 
+                name: 'Google: Gender',
+                options: ['male', 'female', 'unisex']
+            },
+            { 
+                id: 'meta_google_size', 
+                name: 'Google: Size'
+            },
+            { 
+                id: 'meta_google_age_group', 
+                name: 'Google: Age Group',
+                options: ['newborn', 'infant', 'toddler', 'kids', 'adult']
+            },
+            { 
+                id: 'meta_google_brand', 
+                name: 'Google: Brand',
+                linkedTo: 'lieferant'  // Automatically use Hersteller value
+            },
+            { 
+                id: 'meta_google_tags', 
+                name: 'Google: Tags'
+            },
+            { 
+                id: 'meta_google_sku', 
+                name: 'Google: SKU',
+                linkedTo: 'han'  // Automatically use HAN value
+            },
+            { 
+                id: 'meta_google_color', 
+                name: 'Google: Color'
+            }
         ];
 
         this.setupEventListeners();
@@ -133,15 +176,23 @@ class ColumnMapper {
 
         this.sourceColumns.appendChild(mappingContainer);
 
-        // Render default values section with improved UI
+        // Render default values sections
         const defaultValuesContainer = document.createElement('div');
-        defaultValuesContainer.className = 'space-y-4';
+        defaultValuesContainer.className = 'space-y-8';
 
-        // Add description for default values
-        const description = document.createElement('p');
-        description.className = 'text-sm text-gray-600 mb-4';
-        description.textContent = 'Set default values for unmapped or empty fields:';
-        defaultValuesContainer.appendChild(description);
+        // Standard Fields Section
+        const standardFieldsSection = document.createElement('div');
+        standardFieldsSection.className = 'space-y-4';
+        
+        const standardTitle = document.createElement('h3');
+        standardTitle.className = 'text-lg font-semibold text-gray-800';
+        standardTitle.textContent = 'Standard Fields';
+        standardFieldsSection.appendChild(standardTitle);
+
+        const standardDescription = document.createElement('p');
+        standardDescription.className = 'text-sm text-gray-600 mb-4';
+        standardDescription.textContent = 'Set default values for unmapped or empty fields:';
+        standardFieldsSection.appendChild(standardDescription);
 
         this.standardColumns.forEach(column => {
             const div = document.createElement('div');
@@ -159,15 +210,71 @@ class ColumnMapper {
                        data-column="${column.id}"
                        placeholder="Enter default value">
             `;
-            defaultValuesContainer.appendChild(div);
+            standardFieldsSection.appendChild(div);
 
-            // Add change event listener for immediate validation
             const input = div.querySelector('.default-value');
             input.addEventListener('input', () => {
                 this.validateDefaultValue(input, div);
             });
         });
 
+        // Google Meta Fields Section
+        const googleFieldsSection = document.createElement('div');
+        googleFieldsSection.className = 'space-y-4 mt-8';
+        
+        const googleTitle = document.createElement('h3');
+        googleTitle.className = 'text-lg font-semibold text-gray-800';
+        googleTitle.textContent = 'Google Meta Fields';
+        googleFieldsSection.appendChild(googleTitle);
+
+        const googleDescription = document.createElement('p');
+        googleDescription.className = 'text-sm text-gray-600 mb-4';
+        googleDescription.textContent = 'Configure Google Shopping meta fields:';
+        googleFieldsSection.appendChild(googleDescription);
+
+        this.googleMetaFields.forEach(field => {
+            const div = document.createElement('div');
+            div.className = 'flex items-center space-x-4 p-4 bg-gray-50 rounded hover:bg-gray-100 transition-colors';
+            
+            let input;
+            if (field.options) {
+                input = `
+                    <select class="google-meta-value text-sm rounded border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            data-field="${field.id}">
+                        <option value="">-- Select ${field.name} --</option>
+                        ${field.options.map(opt => `
+                            <option value="${opt}">${opt}</option>
+                        `).join('')}
+                    </select>
+                `;
+            } else {
+                input = `
+                    <input type="text" 
+                           class="google-meta-value text-sm rounded border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
+                           data-field="${field.id}"
+                           ${field.defaultValue ? `value="${field.defaultValue}"` : ''}
+                           ${field.readonly ? 'readonly' : ''}
+                           ${field.linkedTo ? 'disabled' : ''}
+                           placeholder="${field.linkedTo ? 'Auto-filled from ' + field.linkedTo : 'Enter value'}">
+                `;
+            }
+
+            div.innerHTML = `
+                <label class="text-sm font-medium flex-1">
+                    ${field.name}
+                    ${field.linkedTo ? `
+                        <span class="block text-xs text-gray-500">
+                            Linked to ${field.linkedTo}
+                        </span>
+                    ` : ''}
+                </label>
+                ${input}
+            `;
+            googleFieldsSection.appendChild(div);
+        });
+
+        defaultValuesContainer.appendChild(standardFieldsSection);
+        defaultValuesContainer.appendChild(googleFieldsSection);
         this.defaultValues.appendChild(defaultValuesContainer);
 
         // Add validation summary section
@@ -389,6 +496,16 @@ class ColumnMapper {
         document.querySelectorAll('.mapping-select').forEach(select => {
             if (select.value) {
                 mapping[select.dataset.source] = select.value;
+
+                // Update linked Google meta fields
+                this.googleMetaFields.forEach(field => {
+                    if (field.linkedTo && field.linkedTo === select.value) {
+                        const linkedInput = document.querySelector(`[data-field="${field.id}"]`);
+                        if (linkedInput) {
+                            linkedInput.value = select.value;
+                        }
+                    }
+                });
             }
         });
 
@@ -396,12 +513,23 @@ class ColumnMapper {
         window.dispatchEvent(new CustomEvent('mappingUpdated', {
             detail: { 
                 mapping,
-                defaults: this.getDefaults()
+                defaults: this.getDefaults(),
+                googleMeta: this.getGoogleMetaValues()
             }
         }));
 
         // Validate the new mapping
         this.updateValidationSummary();
+    }
+
+    getGoogleMetaValues() {
+        const values = {};
+        document.querySelectorAll('.google-meta-value').forEach(input => {
+            if (input.value) {
+                values[input.dataset.field] = input.value;
+            }
+        });
+        return values;
     }
 
     getMapping() {
