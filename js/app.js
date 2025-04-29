@@ -46,13 +46,6 @@ class App {
     }
 
     setupEventListeners() {
-        // Theme toggle
-        this.themeToggle.addEventListener('click', () => {
-            this.currentTheme = this.currentTheme === 'light' ? 'dark' : 'light';
-            this.applyTheme(this.currentTheme);
-            localStorage.setItem('theme', this.currentTheme);
-        });
-
         // Mode switcher with animation
         document.querySelectorAll('input[name="mode"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
