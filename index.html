@@ -32,9 +32,15 @@
                     <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
                     <p class="text-gray-600 mb-2">Drag and drop your file here or</p>
                     <input type="file" id="fileInput" class="hidden" accept=".csv,.xls,.xlsx">
-                    <button onclick="document.getElementById('fileInput').click()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                        Browse Files
-                    </button>
+                    <div class="space-x-4">
+                        <button onclick="document.getElementById('fileInput').click()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            Browse Files
+                        </button>
+                        <button id="loadSampleData" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                            Load Sample Data
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2">Supported formats: CSV, XLS, XLSX</p>
                 </div>
                 <div id="fileInfo" class="mt-4 hidden">
                     <p class="text-sm text-gray-600">Selected file: <span id="fileName" class="font-medium"></span></p>
@@ -42,7 +48,7 @@
             </section>
 
             <!-- Column Mapping Section -->
-            <section class="bg-white rounded-lg shadow-md p-6">
+            <section class="mapping-section bg-white rounded-lg shadow-md p-6 hidden">
                 <h2 class="text-xl font-semibold mb-4">2. Map Columns</h2>
                 <div id="mappingContainer" class="grid grid-cols-2 gap-4">
                     <div>
@@ -54,10 +60,15 @@
                         <div id="targetColumns" class="space-y-2"></div>
                     </div>
                 </div>
+                <div class="mt-4">
+                    <button id="validateMapping" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Validate Mapping
+                    </button>
+                </div>
             </section>
 
             <!-- Default Values Section -->
-            <section class="bg-white rounded-lg shadow-md p-6">
+            <section class="mapping-section bg-white rounded-lg shadow-md p-6 hidden">
                 <h2 class="text-xl font-semibold mb-4">3. Set Default Values</h2>
                 <div id="defaultValues" class="grid grid-cols-2 gap-4">
                     <!-- Default values will be populated here -->
@@ -65,7 +76,7 @@
             </section>
 
             <!-- Parent-Child Article Management -->
-            <section class="bg-white rounded-lg shadow-md p-6">
+            <section class="mapping-section bg-white rounded-lg shadow-md p-6 hidden">
                 <h2 class="text-xl font-semibold mb-4">4. Manage Parent-Child Articles</h2>
                 <div class="space-y-4">
                     <!-- Method Selection -->
@@ -113,7 +124,7 @@
             </section>
 
             <!-- Export Section -->
-            <section class="bg-white rounded-lg shadow-md p-6">
+            <section class="mapping-section bg-white rounded-lg shadow-md p-6 hidden">
                 <h2 class="text-xl font-semibold mb-4">5. Export</h2>
                 <div class="space-y-4">
                     <div class="flex space-x-4">

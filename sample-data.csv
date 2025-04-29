@@ -1,7 +1,7 @@
-Article Number,Item Description,Size,Color,Price,Stock,Weight
-SC001-S-BLK,Travel Suitcase Small Black,S,Black,79.99,15,2.5
-SC001-M-BLK,Travel Suitcase Medium Black,M,Black,99.99,12,3.2
-SC001-L-BLK,Travel Suitcase Large Black,L,Black,129.99,8,4.1
-SC001-S-NVY,Travel Suitcase Small Navy,S,Navy,79.99,10,2.5
-SC001-M-NVY,Travel Suitcase Medium Navy,M,Navy,99.99,8,3.2
-SC001-L-NVY,Travel Suitcase Large Navy,L,Navy,129.99,5,4.1
+GTIN,Article Number,Item Description,Size,Color,Price,Weight,Width,Height,Length,Image URL,Supplier,UVP,Steuerklasse,Steuersatz
+4012345678901,SC001-S-BLK,Premium Travel Suitcase Small Black,S,Black,79.99,2.5,35,55,23,https://example.com/images/sc001-s-blk.jpg,TravelPro,99.99,1,19
+4012345678918,SC001-M-BLK,Premium Travel Suitcase Medium Black,M,Black,99.99,3.2,40,65,28,https://example.com/images/sc001-m-blk.jpg,TravelPro,119.99,1,19
+4012345678925,SC001-L-BLK,Premium Travel Suitcase Large Black,L,Black,129.99,4.1,45,75,33,https://example.com/images/sc001-l-blk.jpg,TravelPro,149.99,1,19
+4012345678932,SC001-S-NVY,Premium Travel Suitcase Small Navy,S,Navy,79.99,2.5,35,55,23,https://example.com/images/sc001-s-nvy.jpg,TravelPro,99.99,1,19
+4012345678949,SC001-M-NVY,Premium Travel Suitcase Medium Navy,M,Navy,99.99,3.2,40,65,28,https://example.com/images/sc001-m-nvy.jpg,TravelPro,119.99,1,19
+4012345678956,SC001-L-NVY,Premium Travel Suitcase Large Navy,L,Navy,129.99,4.1,45,75,33,https://example.com/images/sc001-l-nvy.jpg,TravelPro,149.99,1,19

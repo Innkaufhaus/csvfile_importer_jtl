@@ -13,6 +13,8 @@ class App {
         // Listen for file load
         window.addEventListener('fileLoaded', (e) => {
             this.currentData = e.detail;
+            // Store the data in mapper for validation
+            window.columnMapper.currentData = this.currentData;
             this.enableExport();
         });
 
@@ -88,11 +90,10 @@ class App {
         // Add parent articles
         parentArticles.forEach(parent => {
             processedData.push({
-                sku: parent.number,
-                manufacturerNumber: parent.number,
-                name: parent.description || `Parent Article ${parent.number}`,
+                gtin: parent.number, // Use GTIN as the main identifier
+                artikelname: parent.description || `Parent Article ${parent.number}`,
                 isParent: true,
-                children: parent.children.map(child => child.sku || child.manufacturerNumber)
+                children: parent.children.map(child => child.gtin || child.artikelname)
             });
         });
 
@@ -123,7 +124,7 @@ class App {
                 ${data.map(row => `
                     <tr class="${row.isParent ? 'bg-blue-50' : ''} border-b">
                         ${headerRow.map(header => `
-                            <td class="px-4 py-2 text-sm">
+                            <td class="px-4 py-2 text-sm" data-source="${header}">
                                 ${row[header] || ''}
                             </td>
                         `).join('')}
