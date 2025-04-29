@@ -10,7 +10,7 @@ class ColumnMapper {
         // Standard target columns configuration
         // Standard product columns
         this.standardColumns = [
-            { id: 'gtin', name: 'GTIN', required: true, validate: this.validateGTIN },
+            { id: 'gtin', name: 'GTIN/EAN', required: true, validate: this.validateGTIN, aliases: ['EAN', 'ean', 'GTIN'] },
             { id: 'han', name: 'HAN', required: false },
             { id: 'lieferant', name: 'Lieferant', required: false },
             { id: 'artikelname', name: 'Artikelname', required: true },
@@ -95,11 +95,17 @@ class ColumnMapper {
     validateGTIN(value) {
         if (!value) return false;
         
-        // Remove any whitespace
+        // Remove any whitespace and convert to string
         const cleanValue = value.toString().trim();
         
-        // Check if it's 12 or 13 digits
-        if (!/^\d{12,13}$/.test(cleanValue)) {
+        // Handle Excel number formatting
+        let normalizedValue = cleanValue;
+        if (typeof value === 'number') {
+            normalizedValue = value.toString().padStart(13, '0');
+        }
+        
+        // Check if it's 8, 12, 13, or 14 digits (common EAN/GTIN formats)
+        if (!/^\d{8}$|^\d{12,14}$/.test(normalizedValue)) {
             return false;
         }
         
@@ -133,8 +139,10 @@ class ColumnMapper {
         const requiredColumns = this.standardColumns.filter(col => col.required);
         const optionalColumns = this.standardColumns.filter(col => !col.required);
 
-        // Render source columns with validation status
+        // Render source columns with validation status and auto-mapping
         sourceColumns.forEach(column => {
+            // Auto-map known columns
+            const autoMappedColumn = this.findMatchingColumn(column);
             const div = document.createElement('div');
             div.className = 'flex items-center space-x-2 p-4 bg-gray-50 rounded hover:bg-gray-100 transition-colors';
             div.innerHTML = `
@@ -145,8 +153,12 @@ class ColumnMapper {
                 <i class="fas fa-arrow-right text-gray-400"></i>
                 <div class="flex-1">
                     <select class="mapping-select w-full text-sm rounded border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
-                            data-source="${column}">
+                            data-source="${column}"
+                            ${autoMappedColumn ? `data-auto-mapped="${autoMappedColumn.id}"` : ''}>
                         <option value="">-- Select Target --</option>
+                        ${autoMappedColumn ? 
+                            `<option value="${autoMappedColumn.id}" selected>${autoMappedColumn.name} ${autoMappedColumn.required ? '*' : ''}</option>` 
+                            : ''}
                         ${requiredColumns.length > 0 ? `
                             <optgroup label="Required Fields">
                                 ${requiredColumns.map(target => 
@@ -571,6 +583,26 @@ class ColumnMapper {
             }
         });
         return defaults;
+    }
+
+    findMatchingColumn(sourceColumn) {
+        // Convert source column name to lowercase for case-insensitive comparison
+        const normalizedSource = sourceColumn.toLowerCase();
+        
+        // Find matching standard column by id or aliases
+        return this.standardColumns.find(column => {
+            if (column.id.toLowerCase() === normalizedSource) {
+                return true;
+            }
+            if (column.aliases && column.aliases.some(alias => alias.toLowerCase() === normalizedSource)) {
+                return true;
+            }
+            // Handle common variations
+            if (column.id === 'gtin' && ['ean', 'ean13', 'gtin13', 'barcode'].includes(normalizedSource)) {
+                return true;
+            }
+            return false;
+        });
     }
 }
 

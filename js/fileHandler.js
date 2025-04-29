@@ -13,7 +13,7 @@ class FileHandler {
         // Load sample data button
         this.loadSampleButton.addEventListener('click', async () => {
             try {
-                this.showMessage('Loading sample data...', 'info');
+                window.uiManager.showLoading('Loading sample data...');
                 const response = await fetch('/sample-data.csv');
                 
                 if (!response.ok) {
@@ -36,12 +36,11 @@ class FileHandler {
 
                 // If parsing succeeded, handle the file
                 await this.handleFile(file);
-                this.showMessage('Sample data loaded successfully!', 'success');
+                window.uiManager.showSuccess('Sample data loaded successfully!');
             } catch (error) {
                 console.error('Error loading sample data:', error);
-                this.showMessage(
-                    `Error loading sample data: ${error.message || 'Please try again'}`, 
-                    'error'
+                window.uiManager.showError(
+                    `Error loading sample data: ${error.message || 'Please try again'}`
                 );
             }
         });
@@ -233,19 +232,60 @@ class FileHandler {
                     } else if (!results.data.length) {
                         reject(new Error('No data found in the file'));
                     } else {
-                        // Validate required columns
-                        const requiredColumns = ['GTIN'];
-                        const missingColumns = requiredColumns.filter(col => 
-                            !results.meta.fields.includes(col)
-                        );
+                        // Handle column mapping for GTIN/EAN
+                        const headers = results.meta.fields;
+                        const hasGTIN = headers.includes('GTIN');
+                        const hasEAN = headers.includes('EAN');
 
-                        if (missingColumns.length) {
-                            reject(new Error(
-                                `Missing required columns: ${missingColumns.join(', ')}`
-                            ));
-                        } else {
-                            resolve(results.data);
+                        if (!hasGTIN && !hasEAN) {
+                            reject(new Error('Missing required column: GTIN or EAN'));
+                            return;
                         }
+
+                        // If EAN column exists but no GTIN, map EAN to GTIN
+                        let processedData = results.data;
+                        if (!hasGTIN && hasEAN) {
+                            processedData = results.data.map(row => {
+                                // Convert numeric EAN to string with leading zeros
+                                const eanValue = row.EAN;
+                                if (!isNaN(eanValue)) {
+                                    row.GTIN = eanValue.toString().padStart(13, '0');
+                                } else {
+                                    row.GTIN = eanValue;
+                                }
+                                return row;
+                            });
+                        }
+
+                        // Clean and normalize the data
+                        const cleanedData = processedData.map(row => {
+                            const cleanRow = {};
+                            Object.entries(row).forEach(([key, value]) => {
+                                // Convert empty values to empty strings
+                                if (value === undefined || value === null) {
+                                    cleanRow[key] = '';
+                                }
+                                // Handle numeric values
+                                else if (!isNaN(value)) {
+                                    if (key === 'GTIN' || key === 'EAN') {
+                                        cleanRow[key] = value.toString().padStart(13, '0');
+                                    } else {
+                                        cleanRow[key] = value.toString();
+                                    }
+                                }
+                                // Clean string values
+                                else if (typeof value === 'string') {
+                                    cleanRow[key] = value.trim();
+                                }
+                                // Keep other values as is
+                                else {
+                                    cleanRow[key] = value;
+                                }
+                            });
+                            return cleanRow;
+                        });
+
+                        resolve(cleanedData);
                     }
                 },
                 error: (error) => {
@@ -277,20 +317,57 @@ class FileHandler {
                         throw new Error('No data found in Excel file');
                     }
 
-                    // Validate required columns
-                    const requiredColumns = ['GTIN'];
+                    // Handle column mapping for GTIN/EAN
                     const headers = Object.keys(jsonData[0]);
-                    const missingColumns = requiredColumns.filter(col => 
-                        !headers.includes(col)
-                    );
+                    const hasGTIN = headers.includes('GTIN');
+                    const hasEAN = headers.includes('EAN');
 
-                    if (missingColumns.length) {
-                        throw new Error(
-                            `Missing required columns: ${missingColumns.join(', ')}`
-                        );
+                    if (!hasGTIN && !hasEAN) {
+                        throw new Error('Missing required column: GTIN or EAN');
                     }
 
-                    resolve(jsonData);
+                    // If EAN column exists but no GTIN, map EAN to GTIN
+                    if (!hasGTIN && hasEAN) {
+                        jsonData = jsonData.map(row => {
+                            // Convert numeric EAN to string with leading zeros
+                            if (typeof row.EAN === 'number') {
+                                row.GTIN = row.EAN.toString().padStart(13, '0');
+                            } else {
+                                row.GTIN = row.EAN;
+                            }
+                            return row;
+                        });
+                    }
+
+                    // Clean and normalize the data
+                    const cleanedData = jsonData.map(row => {
+                        const cleanRow = {};
+                        Object.entries(row).forEach(([key, value]) => {
+                            // Convert empty values to empty strings
+                            if (value === undefined || value === null) {
+                                cleanRow[key] = '';
+                            }
+                            // Handle numeric values (like Excel numbers)
+                            else if (typeof value === 'number') {
+                                if (key === 'GTIN' || key === 'EAN') {
+                                    cleanRow[key] = value.toString().padStart(13, '0');
+                                } else {
+                                    cleanRow[key] = value.toString();
+                                }
+                            }
+                            // Clean string values
+                            else if (typeof value === 'string') {
+                                cleanRow[key] = value.trim();
+                            }
+                            // Keep other values as is
+                            else {
+                                cleanRow[key] = value;
+                            }
+                        });
+                        return cleanRow;
+                    });
+
+                    resolve(cleanedData);
                 } catch (error) {
                     reject(new Error(`Excel parsing error: ${error.message}`));
                 }
