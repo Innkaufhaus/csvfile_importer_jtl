@@ -296,40 +296,83 @@ class ColumnMapper {
 
     validateMapping(select, container) {
         const sourceColumn = select.dataset.source;
-        const targetColumn = this.standardColumns.find(col => col.id === select.value);
+        const targetColumn = select.value;
         const validationStatus = container.querySelector('.validation-status');
         const validationIcon = container.querySelector('.validation-icon');
 
-        if (!select.value) {
+        if (!targetColumn) {
             validationStatus.textContent = '';
             validationIcon.innerHTML = '';
             container.classList.remove('border-red-500', 'border-green-500');
             return;
         }
 
-        if (targetColumn && targetColumn.validate && this.currentData) {
-            const invalidValues = [];
-            this.currentData.forEach((row, index) => {
-                const value = row[sourceColumn];
-                if (!targetColumn.validate(value)) {
-                    invalidValues.push({ row: index + 1, value });
+        // Show loading state
+        window.uiManager.showLoading('Validating data...');
+
+        // Use setTimeout to prevent UI blocking
+        setTimeout(() => {
+            try {
+                const columnType = window.dataValidation.columnTypes[targetColumn];
+                if (columnType && columnType.validator && this.currentData) {
+                    const errors = [];
+                    this.currentData.forEach((row, index) => {
+                        const value = row[sourceColumn];
+                        const result = columnType.validator.validate(value);
+                        if (!result.valid) {
+                            errors.push({
+                                row: index + 1,
+                                value,
+                                message: result.message
+                            });
+                        }
+                    });
+
+                    if (errors.length > 0) {
+                        validationStatus.innerHTML = `
+                            <div class="flex items-center space-x-2">
+                                <span class="text-red-500">${errors.length} invalid values found</span>
+                                <button class="text-blue-500 hover:text-blue-600 text-xs underline view-errors">
+                                    View Details
+                                </button>
+                            </div>
+                        `;
+                        validationIcon.innerHTML = '<i class="fas fa-exclamation-circle text-red-500"></i>';
+                        container.classList.add('border-l-4', 'border-red-500');
+                        container.classList.remove('border-green-500');
+
+                        // Add click handler for viewing errors
+                        container.querySelector('.view-errors').addEventListener('click', () => {
+                            window.uiManager.showValidationErrors([{
+                                row: 'Multiple',
+                                errors: errors.map(err => ({
+                                    column: sourceColumn,
+                                    value: err.value,
+                                    message: err.message
+                                }))
+                            }]);
+                        });
+                    } else {
+                        validationStatus.innerHTML = `
+                            <div class="flex items-center space-x-2">
+                                <span class="text-green-500">All values valid</span>
+                                <span class="text-xs text-gray-500">(${this.currentData.length} rows)</span>
+                            </div>
+                        `;
+                        validationIcon.innerHTML = '<i class="fas fa-check-circle text-green-500"></i>';
+                        container.classList.add('border-l-4', 'border-green-500');
+                        container.classList.remove('border-red-500');
+                    }
                 }
-            });
-
-            if (invalidValues.length > 0) {
-                validationStatus.textContent = `Invalid values found in ${invalidValues.length} rows`;
-                validationStatus.className = 'text-xs text-red-500 mt-1';
-                validationIcon.innerHTML = '<i class="fas fa-exclamation-circle text-red-500"></i>';
-                container.classList.add('border-l-4', 'border-red-500');
-            } else {
-                validationStatus.textContent = 'All values valid';
-                validationStatus.className = 'text-xs text-green-500 mt-1';
-                validationIcon.innerHTML = '<i class="fas fa-check-circle text-green-500"></i>';
-                container.classList.add('border-l-4', 'border-green-500');
+            } catch (error) {
+                console.error('Validation error:', error);
+                window.uiManager.showError('Error validating data: ' + error.message);
+            } finally {
+                window.uiManager.hideLoading();
             }
-        }
 
-        this.updateValidationSummary();
+            this.updateValidationSummary();
+        }, 0);
     }
 
     validateDefaultValue(input, container) {
@@ -406,90 +449,68 @@ class ColumnMapper {
         }
     }
 
-    validateAllMappings() {
-        const mapping = this.getMapping();
-        const defaults = this.getDefaults();
-        const errors = [];
-        let hasValidationErrors = false;
+    async validateAllMappings() {
+        window.uiManager.showLoading('Validating all mappings...');
 
-        // Validate all mappings
-        document.querySelectorAll('.mapping-select').forEach(select => {
-            this.validateMapping(select, select.closest('div.flex'));
-            if (select.closest('div.flex').querySelector('.text-red-500')) {
-                hasValidationErrors = true;
+        try {
+            const mapping = this.getMapping();
+            const defaults = this.getDefaults();
+            const errors = [];
+
+            // Validate column mappings
+            const mappingPromises = Array.from(document.querySelectorAll('.mapping-select'))
+                .map(select => new Promise(resolve => {
+                    this.validateMapping(select, select.closest('div.flex'));
+                    resolve();
+                }));
+
+            // Validate default values
+            const defaultPromises = Array.from(document.querySelectorAll('.default-value'))
+                .map(input => new Promise(resolve => {
+                    this.validateDefaultValue(input, input.closest('div.flex'));
+                    resolve();
+                }));
+
+            // Wait for all validations to complete
+            await Promise.all([...mappingPromises, ...defaultPromises]);
+
+            // Collect all validation errors
+            const validationErrors = [];
+            document.querySelectorAll('.validation-status').forEach(status => {
+                if (status.querySelector('.text-red-500')) {
+                    const container = status.closest('div.flex');
+                    const sourceColumn = container.querySelector('.mapping-select')?.dataset.source;
+                    const errorText = status.textContent.trim();
+                    validationErrors.push(`${sourceColumn}: ${errorText}`);
+                }
+            });
+
+            // Update validation summary
+            this.updateValidationSummary();
+
+            // Show final validation result
+            if (validationErrors.length === 0) {
+                window.uiManager.showSuccess('All mappings are valid!');
+                return true;
+            } else {
+                window.uiManager.showError(
+                    'Validation failed. Please fix the errors before proceeding.',
+                    7000
+                );
+                const summary = document.getElementById('validationSummary');
+                summary.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return false;
             }
-        });
-
-        // Validate all default values
-        document.querySelectorAll('.default-value').forEach(input => {
-            this.validateDefaultValue(input, input.closest('div.flex'));
-            if (input.closest('div.flex').classList.contains('border-red-500')) {
-                hasValidationErrors = true;
-            }
-        });
-
-        // Update validation summary
-        this.updateValidationSummary();
-
-        // Show final validation result
-        const summary = document.getElementById('validationSummary');
-        if (!hasValidationErrors && !summary.querySelector('.text-red-500')) {
-            this.showMessage('All mappings are valid!', 'success');
-            return true;
-        } else {
-            this.showMessage('Please fix validation errors before proceeding.', 'error');
-            summary.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch (error) {
+            console.error('Validation error:', error);
+            window.uiManager.showError('An error occurred during validation: ' + error.message);
             return false;
+        } finally {
+            window.uiManager.hideLoading();
         }
     }
 
-    showMessage(message, type = 'info') {
-        // Remove any existing messages
-        const existingMessage = document.querySelector('.message-toast');
-        if (existingMessage) {
-            existingMessage.remove();
-        }
-
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message-toast fixed top-4 right-4 p-4 rounded shadow-lg ${
-            type === 'success' ? 'bg-green-500' :
-            type === 'error' ? 'bg-red-500' :
-            'bg-blue-500'
-        } text-white flex items-center space-x-2 z-50`;
-
-        // Add icon based on message type
-        const icon = document.createElement('i');
-        icon.className = `fas fa-${
-            type === 'success' ? 'check-circle' :
-            type === 'error' ? 'exclamation-circle' :
-            'info-circle'
-        }`;
-        messageDiv.appendChild(icon);
-
-        const text = document.createElement('span');
-        text.textContent = message;
-        messageDiv.appendChild(text);
-
-        document.body.appendChild(messageDiv);
-
-        // Animate the message
-        messageDiv.style.opacity = '0';
-        messageDiv.style.transform = 'translateY(-20px)';
-        messageDiv.style.transition = 'all 0.3s ease-in-out';
-
-        // Force reflow
-        messageDiv.offsetHeight;
-
-        messageDiv.style.opacity = '1';
-        messageDiv.style.transform = 'translateY(0)';
-
-        // Remove after delay
-        setTimeout(() => {
-            messageDiv.style.opacity = '0';
-            messageDiv.style.transform = 'translateY(-20px)';
-            setTimeout(() => messageDiv.remove(), 300);
-        }, 3000);
-    }
+    // UI feedback methods now handled by UIManager
 
     updateMapping() {
         const mapping = {};

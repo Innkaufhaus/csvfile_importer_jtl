@@ -106,24 +106,28 @@ class FileHandler {
     }
 
     async handleFile(file) {
-        // Validate file type
-        const extension = file.name.split('.').pop().toLowerCase();
-        if (!['csv', 'xls', 'xlsx'].includes(extension)) {
-            this.showMessage('Please upload a CSV or Excel file.', 'error');
-            return;
-        }
-
-        // Validate file size (max 10MB)
-        if (file.size > 10 * 1024 * 1024) {
-            this.showMessage('File size must be less than 10MB.', 'error');
-            return;
-        }
-
         try {
-            // Show loading state
-            this.showMessage('Loading file...', 'info');
+            // Validate file type
+            const extension = file.name.split('.').pop().toLowerCase();
+            if (!['csv', 'xls', 'xlsx'].includes(extension)) {
+                window.uiManager.showError('Please upload a CSV or Excel file.');
+                return;
+            }
+
+            // Validate file size (max 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                window.uiManager.showError('File size must be less than 10MB.');
+                return;
+            }
+
+            // Show loading state with progress
+            window.uiManager.showLoading(`Processing ${file.name}...`);
             this.fileName.textContent = file.name;
             this.fileInfo.classList.remove('hidden');
+
+            // Add visual feedback for file processing
+            this.dropZone.classList.add('opacity-50');
+            this.dropZone.style.pointerEvents = 'none';
 
             let data;
             if (extension === 'csv') {
@@ -137,79 +141,75 @@ class FileHandler {
                 throw new Error('File appears to be empty');
             }
 
+            // Basic data validation
+            const invalidRows = this.validateFileData(data);
+            if (invalidRows.length > 0) {
+                window.uiManager.showValidationErrors(invalidRows);
+            }
+
             // Show success message
-            this.showMessage('File loaded successfully!', 'success');
+            window.uiManager.showSuccess('File loaded successfully!');
             
-            // Show mapping sections
-            document.querySelectorAll('.mapping-section').forEach(section => {
-                section.classList.remove('hidden');
+            // Show mapping sections with animation
+            document.querySelectorAll('.mapping-section').forEach((section, index) => {
+                setTimeout(() => {
+                    section.classList.remove('hidden');
+                    section.classList.add('animate-fade-in');
+                }, index * 100);
             });
             
             // Dispatch event with parsed data
             window.dispatchEvent(new CustomEvent('fileLoaded', { detail: data }));
 
-            // Scroll to mapping section
+            // Smooth scroll to mapping section
             document.querySelector('.mapping-section').scrollIntoView({ 
                 behavior: 'smooth',
                 block: 'start'
             });
         } catch (error) {
             console.error('Error parsing file:', error);
-            this.showMessage(
-                'Error parsing file: ' + (error.message || 'Please try again.'), 
-                'error'
+            window.uiManager.showError(
+                'Error parsing file: ' + (error.message || 'Please try again.')
             );
             this.fileInfo.classList.add('hidden');
+        } finally {
+            // Reset UI state
+            this.dropZone.classList.remove('opacity-50');
+            this.dropZone.style.pointerEvents = '';
+            window.uiManager.hideLoading();
         }
     }
 
-    showMessage(message, type = 'info') {
-        // Remove any existing messages
-        const existingMessage = document.querySelector('.message-toast');
-        if (existingMessage) {
-            existingMessage.remove();
-        }
+    validateFileData(data) {
+        const invalidRows = [];
+        
+        data.forEach((row, index) => {
+            const rowNumber = index + 1;
+            const errors = [];
 
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message-toast fixed top-4 right-4 p-4 rounded shadow-lg ${
-            type === 'success' ? 'bg-green-500' :
-            type === 'error' ? 'bg-red-500' :
-            'bg-blue-500'
-        } text-white flex items-center space-x-2 z-50`;
+            // Check for empty or invalid values
+            Object.entries(row).forEach(([column, value]) => {
+                if (value === undefined || value === null || value === '') {
+                    errors.push({
+                        column,
+                        value,
+                        message: 'Empty or invalid value'
+                    });
+                }
+            });
 
-        // Add icon based on message type
-        const icon = document.createElement('i');
-        icon.className = `fas fa-${
-            type === 'success' ? 'check-circle' :
-            type === 'error' ? 'exclamation-circle' :
-            'info-circle'
-        }`;
-        messageDiv.appendChild(icon);
+            if (errors.length > 0) {
+                invalidRows.push({
+                    row: rowNumber,
+                    errors
+                });
+            }
+        });
 
-        const text = document.createElement('span');
-        text.textContent = message;
-        messageDiv.appendChild(text);
-
-        document.body.appendChild(messageDiv);
-
-        // Animate the message
-        messageDiv.style.opacity = '0';
-        messageDiv.style.transform = 'translateY(-20px)';
-        messageDiv.style.transition = 'all 0.3s ease-in-out';
-
-        // Force reflow
-        messageDiv.offsetHeight;
-
-        messageDiv.style.opacity = '1';
-        messageDiv.style.transform = 'translateY(0)';
-
-        // Remove after delay
-        setTimeout(() => {
-            messageDiv.style.opacity = '0';
-            messageDiv.style.transform = 'translateY(-20px)';
-            setTimeout(() => messageDiv.remove(), 300);
-        }, 3000);
+        return invalidRows;
     }
+
+    // UI feedback methods now handled by UIManager
 
     parseCSV(file) {
         return new Promise((resolve, reject) => {

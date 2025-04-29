@@ -9,53 +9,130 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="css/styles.css">
     <style>
         body {
             font-family: 'Inter', sans-serif;
         }
+
+        /* Responsive container padding */
+        @media (max-width: 640px) {
+            .container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+        }
+
+        /* Improved accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
-        <!-- Header -->
-        <header class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">File Mapper</h1>
-            <p class="text-gray-600">Map and standardize your CSV, XLS, and XLSX files</p>
+<body class="bg-gray-50 min-h-screen transition-colors duration-200" id="app">
+    <div class="container mx-auto px-4 py-8 transition-all duration-200">
+        <!-- Theme Toggle -->
+        <div class="fixed top-4 right-4 z-50">
+            <button id="themeToggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <i class="fas fa-sun text-yellow-500 dark:hidden"></i>
+                <i class="fas fa-moon text-blue-300 hidden dark:block"></i>
+            </button>
+        </div>
+        <!-- Header with enhanced accessibility -->
+        <header class="mb-8" role="banner">
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-white mb-2 animate-fade-in">File Mapper</h1>
+            <p class="text-gray-600 dark:text-gray-300 animate-fade-in" style="animation-delay: 0.1s">
+                Map and standardize your CSV, XLS, and XLSX files
+            </p>
         </header>
 
         <!-- Main Content -->
         <div class="grid grid-cols-1 gap-8">
-            <!-- Mode Switcher -->
-            <section class="bg-white rounded-lg shadow-md p-6 flex space-x-8 items-center">
-                <label class="inline-flex items-center space-x-2 cursor-pointer">
-                    <input type="radio" name="mode" value="file" checked class="form-radio text-blue-600">
-                    <span>Upload File</span>
+            <!-- Mode Switcher with improved accessibility -->
+            <section class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 flex flex-wrap gap-4 items-center animate-fade-in" 
+                     style="animation-delay: 0.2s"
+                     role="radiogroup"
+                     aria-label="Import Mode Selection">
+                <label class="inline-flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <input type="radio" 
+                           name="mode" 
+                           value="file" 
+                           checked 
+                           class="form-radio text-blue-600 focus:ring-blue-500"
+                           aria-label="Upload File Mode">
+                    <span class="dark:text-white">
+                        <i class="fas fa-file-upload mr-2"></i>
+                        Upload File
+                    </span>
                 </label>
-                <label class="inline-flex items-center space-x-2 cursor-pointer">
-                    <input type="radio" name="mode" value="gtin" class="form-radio text-blue-600">
-                    <span>Scan GTIN</span>
+                <label class="inline-flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <input type="radio" 
+                           name="mode" 
+                           value="gtin" 
+                           class="form-radio text-blue-600 focus:ring-blue-500"
+                           aria-label="Scan GTIN Mode">
+                    <span class="dark:text-white">
+                        <i class="fas fa-barcode mr-2"></i>
+                        Scan GTIN
+                    </span>
                 </label>
             </section>
 
-            <!-- File Upload Section -->
-            <section id="fileUploadSection" class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-xl font-semibold mb-4">1. Upload File</h2>
-                <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
-                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
-                    <p class="text-gray-600 mb-2">Drag and drop your file here or</p>
-                    <input type="file" id="fileInput" class="hidden" accept=".csv,.xls,.xlsx">
+            <!-- File Upload Section with enhanced accessibility and dark mode -->
+            <section id="fileUploadSection" 
+                     class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 animate-fade-in" 
+                     style="animation-delay: 0.3s"
+                     role="region" 
+                     aria-labelledby="uploadTitle">
+                <h2 id="uploadTitle" class="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+                    <i class="fas fa-upload mr-2"></i>1. Upload File
+                </h2>
+                <div id="dropZone" 
+                     class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center 
+                            hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-200
+                            focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"
+                     role="button"
+                     tabindex="0"
+                     aria-label="Drop zone for file upload"
+                     onkeypress="if(event.key === 'Enter') document.getElementById('fileInput').click()">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 dark:text-gray-500 mb-3 animate-pulse"></i>
+                    <p class="text-gray-600 dark:text-gray-300 mb-2">Drag and drop your file here or</p>
+                    <input type="file" 
+                           id="fileInput" 
+                           class="hidden" 
+                           accept=".csv,.xls,.xlsx"
+                           aria-label="File input">
                     <div class="space-x-4">
-                        <button onclick="document.getElementById('fileInput').click()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                            Browse Files
+                        <button onclick="document.getElementById('fileInput').click()" 
+                                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-400
+                                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                                       dark:focus:ring-offset-gray-800 transition-colors">
+                            <i class="fas fa-folder-open mr-2"></i>Browse Files
                         </button>
-                        <button id="loadSampleData" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
-                            Load Sample Data
+                        <button id="loadSampleData" 
+                                class="bg-gray-500 dark:bg-gray-600 text-white px-4 py-2 rounded 
+                                       hover:bg-gray-600 dark:hover:bg-gray-500
+                                       focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2
+                                       dark:focus:ring-offset-gray-800 transition-colors">
+                            <i class="fas fa-vial mr-2"></i>Load Sample Data
                         </button>
                     </div>
-                    <p class="text-sm text-gray-500 mt-2">Supported formats: CSV, XLS, XLSX</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                        Supported formats: CSV, XLS, XLSX
+                    </p>
                 </div>
-                <div id="fileInfo" class="mt-4 hidden">
-                    <p class="text-sm text-gray-600">Selected file: <span id="fileName" class="font-medium"></span></p>
+                <div id="fileInfo" class="mt-4 hidden animate-fade-in">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-file-alt text-blue-500"></i>
+                        <p class="text-sm text-gray-600 dark:text-gray-300">
+                            Selected file: <span id="fileName" class="font-medium"></span>
+                        </p>
+                    </div>
                 </div>
             </section>
 
@@ -172,9 +249,22 @@
         </div>
     </div>
 
+    <!-- Load utility scripts first -->
+    <script src="js/utils/validation.js"></script>
+    <script src="js/utils/ui.js"></script>
+    <script src="js/utils/themeManager.js"></script>
+
+    <!-- Load core application scripts -->
     <script src="js/fileHandler.js"></script>
     <script src="js/mapper.js"></script>
     <script src="js/variants.js"></script>
     <script src="js/app.js"></script>
+
+    <script>
+        // Initialize dark mode based on system preference
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
 </body>
 </html>
