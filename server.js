@@ -25,10 +25,10 @@ app.post('/api/scan-gtin', async (req, res) => {
     const oxylabsPassword = 'XNA0qcjdjwxqx#yeg';
 
     try {
-        // Example Oxylabs e-commerce scraper API URL and parameters
+        // TODO: Replace with actual Oxylabs e-commerce scraper API URL and parameters
         const apiUrl = 'https://api.oxylabs.io/v1/ecommerce/scraper';
 
-        // Construct request payload
+        // Construct request payload - update as per API docs
         const payload = {
             gtin: gtin,
             // Add other parameters as needed
@@ -46,7 +46,12 @@ app.post('/api/scan-gtin', async (req, res) => {
         res.json(response.data);
     } catch (error) {
         console.error('Error calling Oxylabs API:', error.message);
-        res.status(500).json({ error: 'Failed to fetch data from Oxylabs API' });
+        if (error.response) {
+            console.error('Response data:', error.response.data);
+            res.status(error.response.status).json({ error: error.response.data });
+        } else {
+            res.status(500).json({ error: 'Failed to fetch data from Oxylabs API' });
+        }
     }
 });
 
