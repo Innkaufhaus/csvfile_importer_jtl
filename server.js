@@ -14,6 +14,8 @@ app.get('/sample-data.csv', (req, res) => {
     res.sendFile(path.join(__dirname, 'sample-data.csv'));
 });
 
+const fetch = require('node-fetch');
+
 // POST /api/scan-gtin endpoint
 app.post('/api/scan-gtin', async (req, res) => {
     const { gtin } = req.body;
@@ -25,33 +27,76 @@ app.post('/api/scan-gtin', async (req, res) => {
     const oxylabsPassword = 'XNA0qcjdjwxqx#yeg';
 
     try {
-        // TODO: Replace with actual Oxylabs e-commerce scraper API URL and parameters
-        const apiUrl = 'https://api.oxylabs.io/v1/ecommerce/scraper';
+        const apiUrl = 'https://realtime.oxylabs.io/v1/queries';
 
-        // Construct request payload - update as per API docs
-        const payload = {
-            gtin: gtin,
-            // Add other parameters as needed
+        const body = {
+            source: 'amazon_search',
+            parse: true,
+            parsing_instructions: {
+                results: {
+                    _fns: [
+                        {
+                            _fn: 'css',
+                            _args: ['.s-result-item[data-component-type="s-search-result"]']
+                        }
+                    ],
+                    _items: {
+                        price: {
+                            _fns: [
+                                { _fn: 'css_one', _args: ['.a-price > span'] },
+                                { _fn: 'element_text' },
+                                { _fn: 'amount_from_string' }
+                            ]
+                        },
+                        title: {
+                            _fns: [
+                                { _fn: 'css_one', _args: ['h2 > a > span'] },
+                                { _fn: 'element_text' }
+                            ]
+                        },
+                        rating: {
+                            _fns: [
+                                { _fn: 'css_one', _args: ['i.a-icon-star-small'] },
+                                { _fn: 'element_text' },
+                                { _fn: 'amount_range_from_string' },
+                                { _fn: 'select_nth', _args: [0] }
+                            ]
+                        },
+                        'rating count': {
+                            _fns: [
+                                { _fn: 'css_one', _args: ['[data-csa-c-content-id="alf-customer-ratings-count-component"]'] },
+                                { _fn: 'element_text' },
+                                { _fn: 'amount_from_string' }
+                            ]
+                        }
+                    }
+                }
+            },
+            query: gtin,
+            domain: 'de',
+            locale: 'de-de'
         };
 
-        // Make authenticated request to Oxylabs API
-        const response = await axios.post(apiUrl, payload, {
-            auth: {
-                username: oxylabsUsername,
-                password: oxylabsPassword
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            body: JSON.stringify(body),
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Basic ' + Buffer.from(`${oxylabsUsername}:${oxylabsPassword}`).toString('base64')
             }
         });
 
-        // Return scraped data
-        res.json(response.data);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Oxylabs API error: ${response.status} ${errorText}`);
+        }
+
+        const data = await response.json();
+
+        res.json(data);
     } catch (error) {
         console.error('Error calling Oxylabs API:', error.message);
-        if (error.response) {
-            console.error('Response data:', error.response.data);
-            res.status(error.response.status).json({ error: error.response.data });
-        } else {
-            res.status(500).json({ error: 'Failed to fetch data from Oxylabs API' });
-        }
+        res.status(500).json({ error: 'Failed to fetch data from Oxylabs API', details: error.message });
     }
 });
 
